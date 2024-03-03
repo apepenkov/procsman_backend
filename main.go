@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/apepenkov/yalog"
 	"os"
@@ -18,6 +19,10 @@ func main() {
 	logger := yalog.NewLogger("procsman", yalog.WithPrintTime("2006-01-02 15:04:05"), yalog.WithPrintCaller(20), yalog.WithPrintLevel(), yalog.WithColorEnabled(), yalog.WithPrintTreeName(1, true), yalog.WithVerboseLevel(yalog.VerboseLevelDebug), yalog.WithAnotherColor(yalog.VerboseLevelDebug, yalog.ColorCyan))
 	logger.Debugln("Starting procsman")
 	defer f.Close()
+
+	var serveAddr string
+	flag.StringVar(&serveAddr, "serve", "127.0.0.1:54580", "Address to serve the HTTP API on")
+	flag.Parse()
 
 	var cfg config.Config
 	err = json.NewDecoder(f).Decode(&cfg)
@@ -37,7 +42,7 @@ func main() {
 	}
 
 	defer serv.Close()
-	httpServ := api.NewHttpServer(serv)
+	httpServ := api.NewHttpServer(serv, serveAddr)
 	httpServ.Logger.SetVerboseLevel(yalog.VerboseLevelInfo)
 
 	if err = httpServ.ListenAndServe(); err != nil {

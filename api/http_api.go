@@ -21,12 +21,11 @@ type ModelWithValidation interface {
 	Validate(ctx context.Context, srv *HttpServer) *Error
 }
 
-func NewHttpServer(processManager *procsmanager.ProcessManager) *HttpServer {
+func NewHttpServer(processManager *procsmanager.ProcessManager, serveAddr string) *HttpServer {
 	srv := &HttpServer{
 		Mux: http.NewServeMux(),
 		Server: &http.Server{
-			// TODO: make port configurable
-			Addr:         ":25812",
+			Addr:         serveAddr,
 			ReadTimeout:  time.Second * 10,
 			WriteTimeout: time.Second * 10,
 		},
