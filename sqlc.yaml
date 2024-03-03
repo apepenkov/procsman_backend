@@ -1,0 +1,27 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "sqls/queries.sql"
+    schema: "sqls/schema.sql"
+#    database:
+#      uri: "postgres://procsman_adm:${PG_PASSWORD}@aperlaqf.work:5432/procsman"
+    gen:
+      go:
+        package: "db"
+        out: "db"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        json_tags_case_style: "snake"
+        emit_empty_slices: true
+overrides:
+  go:
+    overrides:
+      - column: "process_group.scripts_configuration"
+        go_type:
+          type: Configuration
+      - column: "process.configuration"
+        go_type:
+          type: Configuration
+      - column: "process.environment"
+        go_type:
+          type: map[string]string
