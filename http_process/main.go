@@ -147,7 +147,7 @@ func main() {
 		fmt.Fprintln(w, "RAM loaded")
 	})
 
-	port := "5432"
+	port := "15432"
 	fmt.Println("[FMT] Starting server on port", port)
 	log.Printf("Starting server on port %s\n", port)
 	log.Fatal(http.ListenAndServe("127.0.0.1:"+port, nil))

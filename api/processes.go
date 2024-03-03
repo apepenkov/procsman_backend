@@ -464,7 +464,7 @@ func (srv *HttpServer) UpdateProcess(w http.ResponseWriter, r *http.Request) {
 	}
 
 	needsRestart := false
-	if existingProcess.Enabled != req.Enabled || req.ExecutablePath != existingProcess.ExecutablePath || req.Arguments != existingProcess.Arguments || req.WorkingDir != existingProcess.WorkingDirectory || maps.Equal(req.Environment, existingProcess.Environment) || req.Config != existingProcess.Configuration {
+	if existingProcess.Enabled != req.Enabled || req.ExecutablePath != existingProcess.ExecutablePath || req.Arguments != existingProcess.Arguments || req.WorkingDir != existingProcess.WorkingDirectory || !maps.Equal(req.Environment, existingProcess.Environment) || req.Config != existingProcess.Configuration {
 		needsRestart = true
 	}
 	var process db.Process

@@ -4,25 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/StackExchange/wmi"
 	"github.com/apepenkov/yalog"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/tklauser/go-sysconf"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"procsman_backend/db"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 // clocksPerSecond will only be used on Unix systems.
-var clocksPerSecond time.Duration
 
 func UtcNow() time.Time {
 	return time.Now().UTC()
@@ -465,43 +461,6 @@ type SubProcess struct {
 	LastUsage *UsageInfo
 }
 
-func (s *SubProcess) getUsageInfoUnix() (*UsageInfo, error) {
-	// TODO: count children processes
-	bytes, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", s.Cmd.Process.Pid))
-	if err != nil {
-		return nil, err
-	}
-	fields := strings.Fields(string(bytes))
-	utime, err := strconv.ParseInt(fields[13], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	stime, err := strconv.ParseInt(fields[14], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	totalClockCycles := time.Duration(utime + stime)
-
-	totalCpuUsageDuration := totalClockCycles / clocksPerSecond
-
-	memBytes, err := os.ReadFile(fmt.Sprintf("/proc/%d/statm", s.Cmd.Process.Pid))
-	if err != nil {
-		return nil, err
-	}
-
-	memPages, err := strconv.ParseInt(strings.Fields(string(memBytes))[0], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	return &UsageInfo{
-		TotalCpuUsage: totalCpuUsageDuration,
-		MemUsage:      memPages * int64(os.Getpagesize()),
-		When:          UtcNow(),
-	}, nil
-}
-
 //goland:noinspection GoSnakeCaseUsage
 type Win32_Process struct {
 	Name            string
@@ -512,80 +471,11 @@ type Win32_Process struct {
 	PageFileUsage   uint32
 }
 
-//goland:noinspection SqlResolve,SqlDialectInspection,SqlType
-func (s *SubProcess) getUsageInfoWindows() (*UsageInfo, error) {
-	var rootProcesses []Win32_Process
-
-	// Fetch root process
-	query := fmt.Sprintf("SELECT Name, ProcessID, ParentProcessId, UserModeTime, KernelModeTime, PageFileUsage FROM Win32_Process WHERE ProcessID "+"= %d", s.Cmd.Process.Pid)
-	err := wmi.Query(query, &rootProcesses)
-	if err != nil {
-		return nil, err
-	}
-	if len(rootProcesses) != 1 {
-		return nil, errors.New("failed to fetch root process")
-	}
-
-	rootProcess := rootProcesses[0]
-
-	// Initialize slice to hold all related processes including the root
-	var allProcesses []Win32_Process
-	allProcesses = append(allProcesses, rootProcess)
-
-	// Recursive function to fetch child processes
-	var fetchChildProcesses func(parentPID uint32) error
-
-	fetchChildProcesses = func(parentPID uint32) error {
-		var childProcesses []Win32_Process
-		childQuery := fmt.Sprintf("SELECT Name, ProcessID, ParentProcessId, UserModeTime, KernelModeTime, PageFileUsage FROM Win32_Process WHERE ParentProcessId "+"= %d", parentPID)
-		childErr := wmi.Query(childQuery, &childProcesses)
-		if childErr != nil {
-			return childErr
-		}
-
-		for _, childProcess := range childProcesses {
-			allProcesses = append(allProcesses, childProcess)
-			childErr = fetchChildProcesses(childProcess.ProcessID) // Recursively fetch children of this child
-			if childErr != nil {
-				return childErr
-			}
-		}
-		return nil
-	}
-
-	// Start recursion from root process
-	err = fetchChildProcesses(rootProcess.ProcessID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Aggregate CPU and memory usage of all processes
-	var totalUserModeTime, totalKernelModeTime, totalPageFileUsage uint64
-	for _, process := range allProcesses {
-		totalUserModeTime += uint64(process.UserModeTime)
-		totalKernelModeTime += uint64(process.KernelModeTime)
-		totalPageFileUsage += uint64(process.PageFileUsage)
-	}
-
-	totalCpuUsageDuration := time.Duration(totalUserModeTime+totalKernelModeTime) * (time.Nanosecond * 100)
-
-	return &UsageInfo{
-		TotalCpuUsage: totalCpuUsageDuration,
-		MemUsage:      int64(totalPageFileUsage) * 1024,
-		When:          UtcNow(),
-	}, nil
-}
-
 func (s *SubProcess) getUsageInfo() (*UsageInfo, error) {
 	if s.Cmd.ProcessState != nil && s.Cmd.ProcessState.Exited() || s.Cmd.Process == nil || s.Cmd.Process.Pid == 0 {
 		return nil, errors.New("process has exited")
 	}
-
-	if //goland:noinspection GoBoolExpressions
-	runtime.GOOS == "windows" {
-		return s.getUsageInfoWindows()
-	}
-	return s.getUsageInfoUnix()
+	return s.getUsageInfoInner()
 }
 
 type UsageRecord struct {
@@ -1007,17 +897,5 @@ func (pr *ProcessRunner) waitForProcessExit(subprocess *SubProcess) {
 		}
 	} else {
 		finish(true, true)
-	}
-}
-
-func init() {
-	if //goland:noinspection GoBoolExpressions
-	runtime.GOOS != "windows" {
-		res, err := sysconf.Sysconf(0x2)
-		if err != nil {
-			panic(err)
-		} else {
-			clocksPerSecond = time.Second / time.Duration(res)
-		}
 	}
 }
