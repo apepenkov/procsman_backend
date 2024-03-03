@@ -1,0 +1,7 @@
+{
+  "db": "postgresql://login:pass@host:5432/procsman",
+  "logs_folder": "logs",
+  "log_file_timespan": 3600,
+  "flush_interval": 1000,
+  "process_stats_interval": 10
+}
