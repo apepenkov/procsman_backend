@@ -15,13 +15,14 @@ type HttpServer struct {
 	Server         *http.Server
 	ProcessManager *procsmanager.ProcessManager
 	Logger         *yalog.Logger
+	AllowOrigin    string
 }
 
 type ModelWithValidation interface {
 	Validate(ctx context.Context, srv *HttpServer) *Error
 }
 
-func NewHttpServer(processManager *procsmanager.ProcessManager, serveAddr string) *HttpServer {
+func NewHttpServer(processManager *procsmanager.ProcessManager, serveAddr string, allowOrigin string) *HttpServer {
 	srv := &HttpServer{
 		Mux: http.NewServeMux(),
 		Server: &http.Server{
@@ -31,6 +32,7 @@ func NewHttpServer(processManager *procsmanager.ProcessManager, serveAddr string
 		},
 		ProcessManager: processManager,
 		Logger:         processManager.Logger.NewLogger("http"),
+		AllowOrigin:    allowOrigin,
 	}
 
 	hf := func(a func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
@@ -99,7 +101,7 @@ func NewHttpServer(processManager *procsmanager.ProcessManager, serveAddr string
 }
 
 func (srv *HttpServer) OPTIONS(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", srv.AllowOrigin)
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS, PATCH, PUT")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Auth-Key")
 	w.WriteHeader(http.StatusOK)

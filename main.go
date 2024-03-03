@@ -21,7 +21,9 @@ func main() {
 	defer f.Close()
 
 	var serveAddr string
+	var allowOrigin string
 	flag.StringVar(&serveAddr, "serve", "127.0.0.1:54580", "Address to serve the HTTP API on")
+	flag.StringVar(&allowOrigin, "allow-origin", "*", "Allow origin for CORS")
 	flag.Parse()
 
 	var cfg config.Config
@@ -42,7 +44,7 @@ func main() {
 	}
 
 	defer serv.Close()
-	httpServ := api.NewHttpServer(serv, serveAddr)
+	httpServ := api.NewHttpServer(serv, serveAddr, allowOrigin)
 	httpServ.Logger.SetVerboseLevel(yalog.VerboseLevelInfo)
 
 	if err = httpServ.ListenAndServe(); err != nil {
