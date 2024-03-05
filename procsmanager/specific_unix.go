@@ -103,6 +103,11 @@ func getUsageInfoUnixRecursive(current *UsageInfo, pid int) error {
 		return err
 	}
 
+	// for some reason totalCpuTime can sometimes be negative?..
+	if totalCpuTime < 0 {
+		totalCpuTime = -totalCpuTime
+	}
+
 	// Update the UsageInfo struct
 	current.TotalCpuUsage += totalCpuTime
 	current.MemUsage += memPages * int64(os.Getpagesize())
