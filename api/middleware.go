@@ -177,7 +177,7 @@ func init() {
 
 	ExpectedAuthKeyBase64Bytes, err := os.ReadFile("auth.key")
 
-	if err != nil {
+	if err != nil || len(ExpectedAuthKeyBase64Bytes) == 0 {
 		if os.IsNotExist(err) {
 			// Create a new auth key
 			authKeyBytes := make([]byte, 64)
