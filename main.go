@@ -47,6 +47,8 @@ func main() {
 	httpServ := api.NewHttpServer(serv, serveAddr, allowOrigin)
 	httpServ.Logger.SetVerboseLevel(yalog.VerboseLevelInfo)
 
+	logger.Infof("Serving on %s\nAllowing origin: %s\n", serveAddr, allowOrigin)
+
 	if err = httpServ.ListenAndServe(); err != nil {
 		logger.Errorln(fmt.Sprintf("Error in HTTP server: %s", err.Error()))
 		panic(err)
