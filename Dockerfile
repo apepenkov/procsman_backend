@@ -16,4 +16,4 @@ RUN go build -o main .
 
 EXPOSE 54580
 
-CMD ["./main", "--serve=127.0.0.1:54580", "--allow-origin=*"]
+CMD ["./main", "--serve=0.0.0.0:54580", "--allow-origin=*"]
