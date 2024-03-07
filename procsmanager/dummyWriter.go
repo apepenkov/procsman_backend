@@ -6,7 +6,7 @@ type DummyWriter struct {
 }
 
 func (d *DummyWriter) Write(p []byte) (n int, err error) {
-	return 0, nil
+	return len(p), nil
 }
 
 func (d *DummyWriter) Close() error {
