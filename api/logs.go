@@ -187,6 +187,9 @@ func (srv *HttpServer) GetProcessLogs(w http.ResponseWriter, r *http.Request) {
 				res.Logs[i].Missing = true
 			}
 			res.Logs[i].Text = logsWriter.String()
+			if len(res.Logs[i].Text) == 1 {
+				res.Logs[i].Text = ""
+			}
 		}
 
 	}
