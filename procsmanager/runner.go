@@ -19,6 +19,7 @@ import (
 )
 
 // clocksPerSecond will only be used on Unix systems.
+var dummyWriter = NewDummyWriter()
 
 func UtcNow() time.Time {
 	return time.Now().UTC()
@@ -271,6 +272,9 @@ func (pl *ProcessLogger) shouldBeClosed() bool {
 // It should be called periodically.
 // It is also called in initialisation to set the current procLog.
 func (pl *ProcessLogger) cycle() error {
+	if !pl.Process.Process.Configuration.GetStoreLogs() {
+		return nil
+	}
 	pl.mu.Lock()
 	defer pl.mu.Unlock()
 
@@ -612,8 +616,13 @@ func (pr *ProcessRunner) NewSubProcess(program string, argsStr string, envVars m
 	// Unfortunately, when using StdoutPipe and StderrPipe, we can't force pipes to flush, so we can't get the output in real time.
 	// So we have to manage them ourselves (including closing them).
 
-	cmd.Stdout = pr.procLog
-	cmd.Stderr = pr.procLog
+	if !pr.Process.Configuration.GetStoreLogs() {
+		cmd.Stdout = dummyWriter
+		cmd.Stderr = dummyWriter
+	} else {
+		cmd.Stdout = pr.procLog
+		cmd.Stderr = pr.procLog
+	}
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -809,7 +818,7 @@ func (pr *ProcessRunner) Work() {
 				pr.Logger.Errorf("Error cycling procLog: %v\n", err)
 			}
 
-			if subprocess != nil && pr.status == db.ProcessStatusRUNNING {
+			if subprocess != nil && pr.status == db.ProcessStatusRUNNING && pr.Process.Configuration.GetRecordStats() {
 				if _, err := pr.RecordUsage(subprocess); err != nil {
 					pr.Logger.Errorf("Error recording usage: %v\n", err)
 				}

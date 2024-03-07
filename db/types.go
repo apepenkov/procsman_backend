@@ -129,6 +129,20 @@ func (c *Configuration) GetStoreLogs() bool {
 	return c.StoreLogs.Bool
 }
 
+func (c *Configuration) Equal(other Configuration) bool {
+	return c.GetAutoRestartOnStop() == other.GetAutoRestartOnStop() &&
+		c.GetAutoRestartOnCrash() == other.GetAutoRestartOnCrash() &&
+		c.GetAutoRestartMaxRetries() == other.GetAutoRestartMaxRetries() &&
+		c.GetAutoRestartMaxRetriesFrame() == other.GetAutoRestartMaxRetriesFrame() &&
+		c.GetAutoRestartDelay() == other.GetAutoRestartDelay() &&
+		c.GetNotifyOnStart() == other.GetNotifyOnStart() &&
+		c.GetNotifyOnRestart() == other.GetNotifyOnRestart() &&
+		c.GetNotifyOnStop() == other.GetNotifyOnStop() &&
+		c.GetNotifyOnCrash() == other.GetNotifyOnCrash() &&
+		c.GetRecordStats() == other.GetRecordStats() &&
+		c.GetStoreLogs() == other.GetStoreLogs()
+}
+
 func init() {
 	defFileName := "default_process_config.json"
 
