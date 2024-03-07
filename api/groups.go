@@ -118,9 +118,9 @@ func (srv *HttpServer) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateProcessGroupRequest struct {
-	Name   string      `json:"name"`
-	Color  pgtype.Text `json:"color"`
-	Config db.Configuration
+	Name   string           `json:"name"`
+	Color  pgtype.Text      `json:"color"`
+	Config db.Configuration `json:"config"`
 }
 
 func (u *UpdateProcessGroupRequest) Validate(ctx context.Context, srv *HttpServer) *Error {
