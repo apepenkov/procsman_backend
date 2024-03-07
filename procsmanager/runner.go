@@ -168,6 +168,18 @@ func (pl *ProcessLogger) FinishLog() error {
 	return nil
 }
 
+func (pl *ProcessLogger) FinishLogOnDelete() error {
+	if pl.CurrentLog == nil {
+		return nil
+	}
+	if pl.FileWriter != nil {
+		if err := pl.closeFile(); err != nil {
+			return err
+		}
+	}
+	return os.RemoveAll(filepath.Dir(pl.CurrentLog.Path))
+}
+
 // retrieveCurrentLog finds the current procLog for the process and sets FileWriter to the file.
 // If there is no current procLog, it creates a new one.
 func (pl *ProcessLogger) retrieveCurrentLog() error {
@@ -729,20 +741,25 @@ func (pr *ProcessRunner) Work() {
 				}
 
 			case Stop, Deleted:
-				_ = pr.SetStatus(db.ProcessStatusSTOPPING)
+				if signal == Stop {
+					_ = pr.SetStatus(db.ProcessStatusSTOPPING)
+				}
+
 				if subprocess != nil {
 					subprocess.Cleanup()
 					subprocess = nil
 					pr.stoppedByUser = true
 				}
-				_ = pr.LogEvent(db.ProcessEventTypeMANUALLYSTOPPED, nil)
-				_ = pr.SetStatus(db.ProcessStatusSTOPPED)
+
 				if signal == Deleted {
-					if err := pr.procLog.FinishLog(); err != nil {
+					if err := pr.procLog.FinishLogOnDelete(); err != nil {
 						pr.Logger.Errorf("Error finishing procLog: %v\n", err)
 					}
 					_ = os.RemoveAll(filepath.Join(pr.Manager.Config.LogsFolder, fmt.Sprintf("%d", pr.Process.ID)))
 					return
+				} else {
+					_ = pr.LogEvent(db.ProcessEventTypeMANUALLYSTOPPED, nil)
+					_ = pr.SetStatus(db.ProcessStatusSTOPPED)
 				}
 
 			case Restart:
