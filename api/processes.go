@@ -244,6 +244,9 @@ func (srv *HttpServer) DeleteProcess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	runner := srv.ProcessManager.GetRunner(int32(idInt))
+	runner.SignalIn <- procsmanager.Deleted
+
 	err = srv.ProcessManager.Queries.DeleteProcess(r.Context(), int32(idInt))
 	if err != nil {
 		rw.E(MessageCodeInternalError, "Internal error", http.StatusInternalServerError, fmt.Sprintf("Error deleting process: %s", err.Error()))
